@@ -285,10 +285,9 @@ def ringdown_fit(times, data, modes, Mf, chif, t0, t0_method='geq', T=100,
     # --------------------------------------
 
     # Construct the coefficient matrix
-    a = np.array([
-        np.exp(-1j*frequencies[i]*(times_masked-t0))
-        for i in range(len(frequencies))
-        ]).T
+    a = np.array(
+        [np.exp(-1j * frequencies[i] * (times_masked)) for i in range(len(frequencies))]
+    ).T
 
     # Solve for the complex amplitudes, C. Also returns the sum of residuals,
     # the rank of a, and singular values of a.
@@ -305,19 +304,20 @@ def ringdown_fit(times, data, modes, Mf, chif, t0, t0_method='geq', T=100,
 
     # Store all useful information to a output dictionary
     best_fit = {
-        'residual': res,
-        'rank': rank,
-        's': s,
-        'mismatch': mm,
-        'C': C,
-        'data': data_masked,
-        'model': model,
-        'model_times': times_masked,
-        't0': t0,
-        'modes': modes,
-        'mode_labels': labels,
-        'frequencies': frequencies
-        }
+        "residual": res,
+        "rank": rank,
+        "s": s,
+        "mismatch": mm,
+        "C": C,
+        "data": data_masked,
+        "model": model,
+        "model_times": times_masked,
+        "t0": t0,
+        "modes": modes,
+        "mode_labels": labels,
+        "frequencies": frequencies,
+        "modes_array": a,
+    }
 
     # Return the output dictionary
     return best_fit
@@ -411,60 +411,60 @@ def dynamic_ringdown_fit(times, data, modes, Mf, chif, t0, t0_method='geq',
     """
     # Mask the data with the requested method
     if t0_method == 'geq':
-        
+
         data_mask = (times>=t0) & (times<t0+T)
-        
+
         times = times[data_mask]
         data = data[data_mask]
-        
+
     elif t0_method == 'closest':
-        
+
         start_index = np.argmin((times-t0)**2)
         end_index = np.argmin((times-t0-T)**2)
         data_mask = np.arange(len(times))[start_index:end_index]
-        
+
         times = times[data_mask]
         data = data[data_mask]
-        
+
     else:
         print("""Requested t0_method is not valid. Please choose between 'geq'
               and 'closest'""")
-    
+
     if type(Mf) in [float, np.float64]:
         Mf = np.full(len(times), Mf)
     else:
         Mf = Mf[data_mask]
-        
+
     if type(chif) in [float, np.float64]:
         chif = np.full(len(times), chif)
     else:
         chif = chif[data_mask]
-    
+
     # Frequencies
     # -----------
-    
+
     frequencies = np.array(qnm.omega_list(modes, chif, Mf))
-        
+
     # Construct coefficient matrix and solve
     # --------------------------------------
-    
+
     # Construct the coefficient matrix
     a = np.exp(-1j*frequencies*(times-t0)).T
 
     # Solve for the complex amplitudes, C. Also returns the sum of
     # residuals, the rank of a, and singular values of a.
     C, res, rank, s = np.linalg.lstsq(a, data, rcond=None)
-    
+
     # Evaluate the model. This needs to be split up into the separate
     # spherical harmonic modes.
     model = np.einsum('ij,j->i', a, C)
-    
+
     # Calculate the (sky-averaged) mismatch for the fit
     mm = mismatch(times, model, data)
-    
+
     # Create a list of mode labels (can be used for plotting)
     labels = [str(mode) for mode in modes]
-    
+
     # Store all useful information to a output dictionary
     best_fit = {
         'residual': res,
@@ -478,11 +478,11 @@ def dynamic_ringdown_fit(times, data, modes, Mf, chif, t0, t0_method='geq',
         'mode_labels': labels,
         'frequencies': frequencies
         }
-    
+
     # Return the output dictionary
     return best_fit
 
-    
+
 def multimode_ringdown_fit(times, data_dict, modes, Mf, chif, t0, 
                            t0_method='geq', T=100, spherical_modes=None):
     """
@@ -966,36 +966,36 @@ def plot_ringdown(times, data, xlim=[-50,100], best_fit=None,
                   spherical_mode argument.""")
         else:
             data = data[spherical_mode]
-            
+
     # We only plot the real part
     data = np.real(data)
-            
+
     if log:
         data = abs(data)
-        
+
     fig, ax = plt.subplots(figsize=(8,4), **fig_kw)
-    
+
     ax.plot(times, data, 'k-', label='Re[data]')
 
     if best_fit is not None:
-        
+
         if type(best_fit['model']) == dict:
-        
+
             if spherical_mode is None:
                 print("""Please specify the best fit spherical mode to plot 
                       with the spherical_mode argument.""")
-            
+
             else:
                 model_data = best_fit['model'][spherical_mode]
-                  
+
         else:
             model_data = best_fit['model']
-            
+
         model_data = np.real(model_data)
-        
+
         if log:
             model_data = abs(model_data)
-            
+
         ax.plot(
             best_fit['model_times'], model_data, 'r-', label='Re[model]', 
             alpha=0.8
@@ -1007,17 +1007,17 @@ def plot_ringdown(times, data, xlim=[-50,100], best_fit=None,
         ax.set_ylabel('$h$')
     else:
         ax.set_ylabel(f'$h_{{{spherical_mode[0]}{spherical_mode[1]}}}$')
-        
+
     if log:
         ax.set_yscale('log')
 
     ax.legend(frameon=False)
-    
+
     if outfile is not None:
         plt.savefig(outfile)
         plt.close()
-        
-        
+
+
 def plot_ringdown_modes(best_fit, spherical_mode=None, plot_type='re', 
                         xlim=None, ylim=None, legend=True, outfile=None, 
                         fig_kw={}):
@@ -1058,8 +1058,8 @@ def plot_ringdown_modes(best_fit, spherical_mode=None, plot_type='re',
         creation. The default is {}.
     """
     fig, ax = plt.subplots(figsize=(8,4), **fig_kw)
-    
-    # Initialize an array to manually sum the modes on as a check, and get the 
+
+    # Initialize an array to manually sum the modes on as a check, and get the
     # relevant complex amplitudes
     if type(best_fit['model']) == dict:
         if spherical_mode is None:
@@ -1068,13 +1068,13 @@ def plot_ringdown_modes(best_fit, spherical_mode=None, plot_type='re',
         else:
             mode_sum = np.zeros_like(best_fit['model'][spherical_mode])
             complex_amplitudes = best_fit['weighted_C'][spherical_mode]
-    
+
     else:
         mode_sum = np.zeros_like(best_fit['model'])
         complex_amplitudes = best_fit['C']
-    
+
     for i in range(len(best_fit['modes'])):
-        
+
         # The waveform for each mode
         mode_waveform = ringdown(
             best_fit['model_times'], 
@@ -1082,52 +1082,52 @@ def plot_ringdown_modes(best_fit, spherical_mode=None, plot_type='re',
             [complex_amplitudes[i]], 
             [best_fit['frequencies'][i]]
             )
-        
+
         # Add to the overall sum
         mode_sum += mode_waveform
-        
+
         # Use a reduced opacity color if the color cycle repeats
         if i > 9:
             alpha = 0.5
         else:
             alpha = 0.7
-        
+
         # Add the mode waveform to the figure
         if plot_type == 're':
             ax.plot(best_fit['model_times'], np.real(mode_waveform), alpha=alpha)
         elif plot_type == 'im':
             ax.plot(best_fit['model_times'], np.imag(mode_waveform), alpha=alpha)
-    
+
     # The overall sum
     if plot_type == 're':
         ax.plot(best_fit['model_times'], np.real(mode_sum), 'k--')
     elif plot_type == 'im':
         ax.plot(best_fit['model_times'], np.imag(mode_sum), 'k--')
-    
+
     if xlim is not None:
         ax.set_xlim(xlim[0],xlim[1])
     ax.set_xlabel('$t\ [M]$')
-    
+
     if ylim is not None:
         ax.set_ylim(ylim[0],ylim[1])
-        
+
     if spherical_mode is None:
         ax.set_ylabel('$h$')
     else:
         ax.set_ylabel(f'$h_{{{spherical_mode[0]}{spherical_mode[1]}}}$')
-    
+
     # Generate the list of labels for the legend
     labels = best_fit['mode_labels'].copy()
     labels.append('Sum')
-    
+
     if legend:
         ax.legend(ax.lines, labels, ncol=3)
-    
+
     if outfile is not None:
         plt.savefig(outfile)
         plt.close()
-        
-        
+
+
 def plot_mode_amplitudes(coefficients, labels, log=False, outfile=None, 
                          fig_kw={}):
     """
@@ -1873,9 +1873,9 @@ def plot_mismatch_omega_grid(mm_grid, re_minmax, im_minmax, truth=None,
     """
     re_min, re_max = re_minmax
     im_min, im_max = im_minmax
-    
+
     fig, ax = plt.subplots(**fig_kw)
-    
+
     # Plot heatmap
     im = ax.imshow(
         np.log10(mm_grid), 
@@ -1889,7 +1889,7 @@ def plot_mismatch_omega_grid(mm_grid, re_minmax, im_minmax, truth=None,
         # Indicate true values
         ax.axhline(truth[0], color='w', alpha=0.3)
         ax.axvline(truth[1], color='w', alpha=0.3)
-        
+
     if marker is not None:
         # Mark a partiular mass-spin combination
         ax.plot(marker[0], marker[1], marker='o', markersize=3, color='k')
@@ -1902,14 +1902,14 @@ def plot_mismatch_omega_grid(mm_grid, re_minmax, im_minmax, truth=None,
 
     ax.set_xlabel('$\mathrm{Re}[\omega]$')
     ax.set_ylabel('$\mathrm{Im}[\omega]$')
-    
+
     plt.tight_layout()
-    
+
     if outfile is not None:
         plt.savefig(outfile)
         plt.close()
-        
-        
+
+
 def free_frequency_fit(times, data, t0, modes=[], Mf=None, chif=None, 
                        t0_method='geq', T=100, min_method='Nelder-Mead'):
     """
@@ -1979,35 +1979,35 @@ def free_frequency_fit(times, data, t0, modes=[], Mf=None, chif=None,
     """
     # Mask the data with the requested method
     if t0_method == 'geq':
-        
+
         data_mask = (times>=t0) & (times<t0+T)
-        
+
         times = times[data_mask]
         data = data[data_mask]
-        
+
     elif t0_method == 'closest':
-        
+
         start_index = np.argmin((times-t0)**2)
         end_index = np.argmin((times-t0-T)**2)
-        
+
         times = times[start_index:end_index]
         data = data[start_index:end_index]
-        
+
     else:
         print("""Requested t0_method is not valid. Please choose between 'geq'
               and 'closest'""")
-              
-    # Compute fixed frequencies - we always include these in the fit (along 
+
+    # Compute fixed frequencies - we always include these in the fit (along
     # with the additional free frequency)
     fixed_frequencies = np.array(qnm.omega_list(modes, chif, Mf))
-    
+
     # The initial guess in the minimization
     x0 = [1, -0.5]
-    
+
     # Other settings for the minimzation
     bounds = [(0,2), (-1,0)]
     options = {'xatol':1e-8,'disp':False}
-    
+
     def mismatch_f_tau(x, times, data, t0):
         """
         A modification to the ringdown_fit function which allows a single 
@@ -2015,27 +2015,27 @@ def free_frequency_fit(times, data, t0, modes=[], Mf=None, chif=None,
         """
         # Extract the value of the free frequency
         omega_free = x[0] + 1j*x[1]
-        
+
         # Combine the free frequency with the fixed frequencies
         frequencies = np.hstack([fixed_frequencies, omega_free])
-        
+
         # Construct the coefficient matrix
         a = np.array([
             np.exp(-1j*frequencies[i]*(times-t0)) for i in range(len(frequencies))
             ]).T
-    
-        # Solve for the complex amplitudes, C. Also returns the sum of 
+
+        # Solve for the complex amplitudes, C. Also returns the sum of
         # residuals, the rank of a, and singular values of a.
         C, res, rank, s = np.linalg.lstsq(a, data, rcond=None)
-    
+
         # Evaluate the model
         model = np.einsum('ij,j->i', a, C)
-        
+
         # Calculate the mismatch for the fit
         mm = mismatch(times, model, data)
-        
+
         return mm
-    
+
     # Perform the SciPy minimization
     res = minimize(
         mismatch_f_tau, 
@@ -2045,11 +2045,11 @@ def free_frequency_fit(times, data, t0, modes=[], Mf=None, chif=None,
         bounds=bounds, 
         options=options
         )
-    
+
     omega_bestfit = res.x[0] + 1j*res.x[1]
-    
+
     return omega_bestfit
-    
+
 
 def rational_filter(times, data, modes, Mf, chif, t_start=-300, t_end=None, 
                     dt=None, t_taper=100, align_inspiral=True):
